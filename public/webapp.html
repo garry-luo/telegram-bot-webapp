@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Telegram Web App</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #ffffff;
+      color: #000000;
+      padding: 20px;
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .section {
+      margin-bottom: 20px;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      border: 1px solid #e0e0e0;
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 10px;
+      color: #000000;
+    }
+
+    .data-display {
+      background: #f5f5f5;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 10px;
+      font-family: monospace;
+      font-size: 12px;
+      white-space: pre-wrap;
+      overflow-x: auto;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .button {
+      width: 100%;
+      padding: 12px;
+      background: #007bff;
+      color: #ffffff;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    .button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    .copy-button {
+      background: #6c757d;
+      color: white;
+      border: none;
+      padding: 6px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      cursor: pointer;
+      margin-right: 10px;
+      margin-top: 10px;
+    }
+
+    .status {
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    .status.success {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .status.error {
+      background: #f8d7da;
+      color: #721c24;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>Web App 資料檢視器</h1>
+
+  <div class="section">
+    <div class="section-title">WebApp 初始化資料 (JSON)</div>
+    <div class="data-display" id="initDataUnsafe">載入中...</div>
+    <button class="copy-button" onclick="copyJSON()">複製 JSON</button>
+  </div>
+
+  <div class="section">
+    <div class="section-title">原始初始化資料</div>
+    <div class="data-display" id="initDataRaw">載入中...</div>
+    <button class="copy-button" onclick="copyRaw()">複製原始資料</button>
+  </div>
+
+  <div class="section">
+    <div class="section-title">伺服器驗證</div>
+    <button class="button" id="verifyButton" onclick="verifyData()">
+      驗證資料
+    </button>
+    <div id="verifyStatus"></div>
+  </div>
+</div>
+
+<script>
+  const tg = window.Telegram.WebApp;
+
+  // 顯示 JSON 資料
+  function displayInitData() {
+    const initDataUnsafe = tg?.initDataUnsafe;
+    const initDataRaw = tg?.initData;
+
+    if (initDataUnsafe) {
+      document.getElementById('initDataUnsafe').textContent = JSON.stringify(initDataUnsafe, null, 2);
+    } else {
+      document.getElementById('initDataUnsafe').textContent = '無法取得 initDataUnsafe';
+    }
+
+    if (initDataRaw) {
+      document.getElementById('initDataRaw').textContent = initDataRaw;
+    } else {
+      document.getElementById('initDataRaw').textContent = '無法取得 initData';
+    }
+  }
+
+  // 複製 JSON
+  async function copyJSON() {
+    const initDataUnsafe = tg?.initDataUnsafe;
+    if (initDataUnsafe) {
+      try {
+        await navigator.clipboard.writeText(JSON.stringify(initDataUnsafe, null, 2));
+        alert('JSON 已複製到剪貼簿');
+      } catch (err) {
+        alert('複製失敗');
+      }
+    }
+  }
+
+  // 複製原始資料
+  async function copyRaw() {
+    const initDataRaw = tg?.initData;
+    if (initDataRaw) {
+      try {
+        await navigator.clipboard.writeText(initDataRaw);
+        alert('原始資料已複製到剪貼簿');
+      } catch (err) {
+        alert('複製失敗');
+      }
+    }
+  }
+
+  // 驗證資料
+  async function verifyData() {
+    const button = document.getElementById('verifyButton');
+    const statusDiv = document.getElementById('verifyStatus');
+    const initDataRaw = tg?.initData;
+
+    if (!initDataRaw) {
+      statusDiv.innerHTML = '<div class="status error">沒有可驗證的資料</div>';
+      return;
+    }
+
+    button.disabled = true;
+    button.textContent = '驗證中...';
+
+    try {
+      const response = await fetch('/api/verify', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({initData: initDataRaw})
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        statusDiv.innerHTML = `
+          <div class="status success">
+            驗證成功！<br>
+          </div>
+        `;
+      } else {
+        statusDiv.innerHTML = `<div class="status error">驗證失敗: ${result.error}</div>`;
+      }
+
+    } catch (error) {
+      statusDiv.innerHTML = '<div class="status error">網路錯誤</div>';
+    } finally {
+      button.disabled = false;
+      button.textContent = '驗證資料';
+    }
+  }
+
+  // 初始化
+  document.addEventListener('DOMContentLoaded', function () {
+    if (tg) {
+      tg.expand();
+      tg.ready();
+    }
+    displayInitData();
+  });
+</script>
+</body>
+</html>
