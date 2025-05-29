@@ -31,10 +31,12 @@
        ```bash
        ngrok http 3000
        ```
+    4. 複製顯示的 https 網址（例如：https://abc123.ngrok-free.app）
+
 2. 設定 `.env`
    ```text
    BOT_TOKEN=你的TelegramBotToken
-   WEBHOOK_URL=你的公開網址
+   WEBHOOK_URL=https://abc123.ngrok-free.app
    PORT=你開啟的port
    ```
 
