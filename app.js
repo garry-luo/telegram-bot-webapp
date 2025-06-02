@@ -39,26 +39,6 @@ async function setupWebhook() {
   }
 }
 
-// 發送訊息
-async function sendMessage(chatId, text, options = {}) {
-  try {
-    const response = await fetch(
-        `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({
-            chat_id: chatId,
-            text: text,
-            ...options
-          })
-        });
-
-    return await response.json();
-  } catch (error) {
-    console.error('發送訊息錯誤:', error);
-  }
-}
-
 // 驗證
 function verifyTelegramWebAppData(initData) {
   try {
@@ -102,14 +82,25 @@ app.post('/webhook', async (req, res) => {
             }
           ]]
         };
-
-        await sendMessage(chatId, '點擊下方按鈕開啟 Web App',
-            {reply_markup: keyboard});
+        return res.status(200).json({
+          method: 'sendMessage',
+          chat_id: chatId,
+          text: '點擊下方按鈕開啟 Web App',
+          reply_markup: keyboard
+        });
       } else if (text === '/help') {
         const helpMessage = `/start - 顯示 Web App 按鈕\n/help - 顯示此說明`;
-        await sendMessage(chatId, helpMessage);
+        return res.status(200).json({
+          method: 'sendMessage',
+          chat_id: chatId,
+          text: helpMessage
+        });
       } else {
-        await sendMessage(chatId, `Echo：${text}\n\n可輸入 /help 查看可用指令`);
+        return res.status(200).json({
+          method: 'sendMessage',
+          chat_id: chatId,
+          text: `Echo：${text}\n\n可輸入 /help 查看可用指令`
+        });
       }
     }
 
